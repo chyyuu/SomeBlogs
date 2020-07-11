@@ -54,8 +54,8 @@ fn make_slice(pair: (usize, usize)) -> &'static mut [u8] {
 extern crate libc;
 
 extern "C" {
-fn make_slice() -> &'static [u8];
-fn make_null_slice() -> &'static [u8];
+    fn make_slice() -> &'static [u8];
+    fn make_null_slice() -> &'static [u8];
 }
 
 fn main() {
@@ -76,27 +76,27 @@ typedef unsigned long long usize;
 
 // I assume that 'zx_iovec' has the same memory layout as '&[u8]'
 typedef struct zx_iovec {
-void* buffer;
-usize capacity;
+    void* buffer;
+    usize capacity;
 } zx_iovec_t;
 
 zx_iovec_t null = {
-.buffer = (void*)0,
-.capacity = 3,
+    .buffer = (void*)0,
+    .capacity = 3,
 };
 
 char buffer[17] = "0123456789ABCDEF";
 zx_iovec_t vec = {
-.buffer = buffer,
-.capacity = sizeof(buffer),
+    .buffer = buffer,
+    .capacity = sizeof(buffer),
 };
 
 zx_iovec_t make_null_slice() {
-return null;
+    return null;
 }
 
 zx_iovec_t make_slice() {
-return vec;
+    return vec;
 }
 ```
 
