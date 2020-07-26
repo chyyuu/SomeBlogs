@@ -41,13 +41,9 @@ datagram_len: VecDeque<usize>,
 
 在 zircon 代码中，使用一个数组的链表实现数据报。
 
-### //TODO
+### 关于测试
 
-目前 socket 仍有两个 core-tests 并未通过，为 `ReadIntoBadBuffer` 和 `WriteFromBadBuffer`
-
-要求：socket 能够检测目标地址权限是否正确，如 read 中 user_bytes 对应地址是否可写。
-
-现状：page fault.....
+socket test 中有两个比较特殊，`ReadIntoBadBuffer` 、`WriteFromBadBuffer`
 
 ```c
 TEST(SocketTest, ReadIntoBadBuffer) {
@@ -72,5 +68,5 @@ TEST(SocketTest, ReadIntoBadBuffer) {
 }
 ```
 
-
+这两个测试中会创建一个”不可读不可写不可执行“的页面映射，这在目前 zCore 的实现中会导致 vmar map 失败（因为这样的页面是没有任何意义的，仅仅会存在于测试中），这样的判断是合理的，临时变通修改代码后可以通过该测试，目前的实现中保留了这个合理的"错误"。
 
