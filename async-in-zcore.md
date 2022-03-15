@@ -237,67 +237,24 @@ zCore 内核中会存在两类协程任务，一类为内核协程，对应处�
 
 ## 3. 测试
 
-* ???
-
-| entry_num | time (1M copy) | time(10k copy) |
-| :-------: | :----------: | :-------: |
-|   0        |              |  |
-|  1  | 1250(10) |  |
-|     2     | 1175(5) |  |
-|     4     | 1140(5) |  |
-|     8     | 1122(5) |  |
-|    16     | 1114(5) | 719 |
-|    32     | 1114(5) | 384 |
-|    64     | 1114(5) | 223 |
-|    inf    | 1114(5) | 60(8) |
-
-raw data
-
-| entry_num | time (1M copy) | time(10k copy) |
-| :-------: | :----------: | :-------: |
-|   0        |              |  |
-|  1  |  | 13120 |
-|     2     |  | 6590 |
-|     4     | 7624 | 3315 |
-|     8     | 4358 | 1686 |
-|    16     | 2722 | 870 |
-|    32     | 1889 | 455 |
-|    64     | 1508 | 256 |
-|    inf    | 1120 | 64 |
-
-| entry_num | time (1M copy) | time(10k copy) |
-| :-------: | :----------: | :-------: |
-|   0        |              |  |
-|  1  |  |  |
-|     2     | 11928 | 5479 |
-|     4     |  | 2709 |
-|     8     |  | 1409 |
-|    16     | 2436 | 719 |
-|    32     | 1768 | 384 |
-|    64     | 1429 | 223 |
-|    inf    | 1114 | 60(8) |
-
-
-
 * coroutine
 
 ```shell
 > sudo perf stat -e dTLB-load-misses,iTLB-load-misses,cs,cache-misses,sched:sched_switch ./coroutine_switch
+ 
+ TIMES 10000000 delta1 0.000000079 seconds delta2 0.000000079 seconds
 
-TIMES 100000000 delta1 0.000000071 seconds delta2 0.000000071 seconds
+ Performance counter stats for './target/release/coroutine_switch':
 
- Performance counter stats for './coroutine_switch':
+             8,456      dTLB-load-misses                                            
+             3,509      iTLB-load-misses                                            
+                43      cs                                                          
+           188,592      cache-misses                                                
 
-             9,782      dTLB-load-misses                                            
-             6,276      iTLB-load-misses                                            
-                42      cs                                                          
-           143,436      cache-misses                                                
-                42      sched:sched_switch                                          
+       0.796615966 seconds time elapsed
 
-       7.187782972 seconds time elapsed
-
-       7.188721000 seconds user
-       0.004006000 seconds sys
+       0.791792000 seconds user
+       0.007997000 seconds sys
 ```
 
 * proc
@@ -305,23 +262,20 @@ TIMES 100000000 delta1 0.000000071 seconds delta2 0.000000071 seconds
 ```shell
 > sudo perf stat -e dTLB-load-misses,iTLB-load-misses,cs,cache-misses,sched:sched_switch ./proc_switch
 
-Sched Policy: SCHED_FIFO
-Run in cpu #5
-F 10000000 switchs delta = 0.000001760
-C 10000000 switchs delta = 0.000001760
+ F TIMES 10000000 delta 0.000001677 seconds
+ C TIMES 10000000 delta 0.000001677 seconds
 
- Performance counter stats for './proc_switch':
+ Performance counter stats for './target/release/proc_switch':
 
-        20,004,525      dTLB-load-misses                                            
-        19,985,541      iTLB-load-misses                                            
-        20,000,007      cs                                                          
-           574,625      cache-misses                                                
-        20,000,007      sched:sched_switch                                          
+        20,008,657      dTLB-load-misses                                            
+        21,090,368      iTLB-load-misses                                            
+        20,000,006      cs                                                          
+         3,549,111      cache-misses                                                
 
-      16.779850270 seconds time elapsed
+      16.774689969 seconds time elapsed
 
-       5.750461000 seconds user
-      11.029393000 seconds sys
+       3.130511000 seconds user
+       5.271587000 seconds sys
 ```
 
 * thread
@@ -329,23 +283,50 @@ C 10000000 switchs delta = 0.000001760
 ```shell
 > sudo perf stat -e dTLB-load-misses,iTLB-load-misses,cs,cache-misses,sched:sched_switch ./thread_switch
 
-Sched Policy: SCHED_FIFO
-Run in cpu #8
-1 10000000 switchs delta = 0.000001479
-2 10000000 switchs delta = 0.000001479
+ Sched Policy: SCHED_FIFO
+ Run in cpu #8
+ TIMES 10000000 delta1 0.000001498 seconds delta2 0.000001498 seconds
 
- Performance counter stats for './thread_switch':
+ Performance counter stats for './target/release/thread_switch':
 
-        20,003,856      dTLB-load-misses                                            
-        19,997,263      iTLB-load-misses                                            
-        19,999,841      cs                                                          
-           160,358      cache-misses                                                
-        19,999,841      sched:sched_switch                                          
+        20,011,649      dTLB-load-misses                                            
+        22,897,374      iTLB-load-misses                                            
+        20,000,007      cs                                                          
+         1,620,228      cache-misses                                                
 
-      14.795881018 seconds time elapsed
+      14.992523193 seconds time elapsed
 
-       5.664067000 seconds user
-       9.132108000 seconds sys
+       6.383470000 seconds user
+       8.607285000 seconds sys
 
 ```
 
+
+
+|  Insize   |    bs     | entry | time |
+| :-------: | :-------: | :---: | :--: |
+| 0x1000000 |  0x1000   |   -   | 1109 |
+| 0x1000000 |  0x1000   | 1024  | 1112 |
+| 0x1000000 |  0x1000   |  256  | 1108 |
+| 0x1000000 |  0x1000   |  64   | 1133 |
+| 0x1000000 |  0x1000   |  16   | 1139 |
+| 0x1000000 |  0x1000   |   4   | 1202 |
+| 0x1000000 |  0x1000   |   2   | 1261 |
+| 0x1000000 |  0x1000   |   1   | 1369 |
+| 0x1000000 | 0x1000000 |   -   | 1088 |
+|           |           |       |      |
+|   65536   |    32     |   1   | 104  |
+|   65536   |    32     |   4   |  64  |
+|   65536   |    32     |  16   |  58  |
+|   65536   |    32     |  64   |  55  |
+|   65536   |    32     | 2048  |  56  |
+|   65536   |   65536   |   -   |  4   |
+|   65536   |    32     |   1   | 130  |
+|   65536   |    32     |   4   |  73  |
+|   65536   |    32     |  16   |  60  |
+|   65536   |    32     |  64   |  59  |
+|   65536   |    32     | 2048  |  61  |
+|   65536   |   65536   |   -   |  4   |
+|           |           |       |      |
+|           |           |       |      |
+|           |           |       |      |
