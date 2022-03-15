@@ -112,13 +112,13 @@ pub(super) struct CompletionRingEntry {
 
 本节首先简单介绍了 rust async 机制，而后以文件系统为例，从异步驱动开始，自底向上简单介绍完成一次异步 syscall 会经过的步骤。总体而言，除了使用协程替代线程之外，zCore 的运行逻辑与 Linux 等传统内核区别并不大。
 
-##### 2.2.1 Rust async 语法特性介绍
+##### 2.2.1 Rust async 语法特性简介
 
-// TODO
+`async` `await` 语法是 rust 提供的一种以同步风格写异步代码的方式。一个普通函数被标注为 `async` 后，编译器将会将其转化为一个 generator（一个包含状态的函数，可以被多次调用，本质是一个有限状态自动机，每次调用相当于尝试进行一次状态转移）。调用 `async` 函数会返回一个 `Future` 结构体，也就是一个包含状态转移函数和初始状态的 generator，一个 `Future` 被 await 后
 
 ##### 2.2.1 协程内存开销以及切换开销
 
-// TODO
+
 
 ##### 2.2.2 异步 virtio 驱动
 
@@ -232,4 +232,120 @@ zCore 内核中会存在两类协程任务，一类为内核协程，对应处�
 * load balance 与调度
 
   核心专用化在提高局部性的同时，给负载均衡带来了麻烦，一方面时用户核与内核核之间的均衡，另一方面是不同任务的内核核之间的均衡。zCore 需要引入合理的负载度量机制，动态的在两个维度上进行负载均衡的调度。
+
+
+
+## 3. 测试
+
+* ???
+
+| entry_num | time (1M copy) | time(10k copy) |
+| :-------: | :----------: | :-------: |
+|   0        |              |  |
+|  1  | 1250(10) |  |
+|     2     | 1175(5) |  |
+|     4     | 1140(5) |  |
+|     8     | 1122(5) |  |
+|    16     | 1114(5) | 719 |
+|    32     | 1114(5) | 384 |
+|    64     | 1114(5) | 223 |
+|    inf    | 1114(5) | 60(8) |
+
+raw data
+
+| entry_num | time (1M copy) | time(10k copy) |
+| :-------: | :----------: | :-------: |
+|   0        |              |  |
+|  1  |  | 13120 |
+|     2     |  | 6590 |
+|     4     | 7624 | 3315 |
+|     8     | 4358 | 1686 |
+|    16     | 2722 | 870 |
+|    32     | 1889 | 455 |
+|    64     | 1508 | 256 |
+|    inf    | 1120 | 64 |
+
+| entry_num | time (1M copy) | time(10k copy) |
+| :-------: | :----------: | :-------: |
+|   0        |              |  |
+|  1  |  |  |
+|     2     | 11928 | 5479 |
+|     4     |  | 2709 |
+|     8     |  | 1409 |
+|    16     | 2436 | 719 |
+|    32     | 1768 | 384 |
+|    64     | 1429 | 223 |
+|    inf    | 1114 | 60(8) |
+
+
+
+* coroutine
+
+```shell
+> sudo perf stat -e dTLB-load-misses,iTLB-load-misses,cs,cache-misses,sched:sched_switch ./coroutine_switch
+
+TIMES 100000000 delta1 0.000000071 seconds delta2 0.000000071 seconds
+
+ Performance counter stats for './coroutine_switch':
+
+             9,782      dTLB-load-misses                                            
+             6,276      iTLB-load-misses                                            
+                42      cs                                                          
+           143,436      cache-misses                                                
+                42      sched:sched_switch                                          
+
+       7.187782972 seconds time elapsed
+
+       7.188721000 seconds user
+       0.004006000 seconds sys
+```
+
+* proc
+
+```shell
+> sudo perf stat -e dTLB-load-misses,iTLB-load-misses,cs,cache-misses,sched:sched_switch ./proc_switch
+
+Sched Policy: SCHED_FIFO
+Run in cpu #5
+F 10000000 switchs delta = 0.000001760
+C 10000000 switchs delta = 0.000001760
+
+ Performance counter stats for './proc_switch':
+
+        20,004,525      dTLB-load-misses                                            
+        19,985,541      iTLB-load-misses                                            
+        20,000,007      cs                                                          
+           574,625      cache-misses                                                
+        20,000,007      sched:sched_switch                                          
+
+      16.779850270 seconds time elapsed
+
+       5.750461000 seconds user
+      11.029393000 seconds sys
+```
+
+* thread
+
+```shell
+> sudo perf stat -e dTLB-load-misses,iTLB-load-misses,cs,cache-misses,sched:sched_switch ./thread_switch
+
+Sched Policy: SCHED_FIFO
+Run in cpu #8
+1 10000000 switchs delta = 0.000001479
+2 10000000 switchs delta = 0.000001479
+
+ Performance counter stats for './thread_switch':
+
+        20,003,856      dTLB-load-misses                                            
+        19,997,263      iTLB-load-misses                                            
+        19,999,841      cs                                                          
+           160,358      cache-misses                                                
+        19,999,841      sched:sched_switch                                          
+
+      14.795881018 seconds time elapsed
+
+       5.664067000 seconds user
+       9.132108000 seconds sys
+
+```
 
