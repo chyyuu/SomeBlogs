@@ -109,7 +109,7 @@ zCore: A Next Gen Rust OS
 ### 总体介绍 - 项目规模
 目前大约3万行左右代码量
 
-![w:700](zcore-loc.svg)
+![w:700](zcore_arch_lines.png)
 
 ---
 
@@ -173,6 +173,8 @@ rCore OS 生态
 HAL 硬件抽象层的设计实现
 
 ![h:200](zcore-hal.svg)
+
+![h:200](zcore_hal_arch.png)
 
 ---
 
