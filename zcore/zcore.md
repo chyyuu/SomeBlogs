@@ -1,25 +1,36 @@
 ---
-
 marp: true
+theme: default
+paginate: true
+_paginate: false
+header: ''
+footer: ''
+backgroundColor: white
 size: 4:3
-piginate: true
+
 ---
-<!-- paginate: true -->
+<!-- theme: gaia -->
+<!-- _class: lead -->
+# zCore OS Kernel进展汇报
 
-# zCore 简介
+<br>
 
-// TODO： reporter
+陈渝
+
+清华大学
+
 2022.3.16
 
 ---
 
 # 提纲
 
-* 整体介绍
+- 背景
+- 整体介绍
 
-* 主要技术：用户态 OS，异步的 zCore
+- 主要技术：用户态 OS，异步的 zCore
 
-* Fuchsia 与 Zircon 内核对象简介
+- Fuchsia 与 Zircon 内核对象简介
 
 ---
 
@@ -27,17 +38,17 @@ piginate: true
 
 Rust 语言编写的“混合”操作系统内核
 
-* 同时支持 Linux 和 Zircon 系统调用
+- 同时支持 Linux 和 Zircon 系统调用
 
-* 同时支持 LibOS 和 裸机 OS 形式
+- 同时支持 LibOS 和 裸机 OS 形式
 
   可以完全在用户态开发、测试、运行
 
-* 符合 Rust 风格，项目模块化
+- 符合 Rust 风格，项目模块化
 
-* 使用 Rust async 机制，内核协程化
+- 使用 Rust async 机制，内核协程化
 
-* 充分发挥异步特征，重新思考 syscall 以及调度
+- 充分发挥异步特征，重新思考 syscall 以及调度
 
 ---
 
@@ -71,13 +82,13 @@ Rust 语言编写的“混合”操作系统内核
 
 ## 软件工程：自动测试
 
-* `#![deny(warnings)]`：警告报错
+- `#![deny(warnings)]`：警告报错
 
-* cargo fmt && clippy：检查代码格式和风格
-* cargo build：保证所有平台编译通过
-* cargo test：用户态单元测试，报告测试覆盖率
-* core-test：内核态集成测试，维护通过测例列表
-* （TODO）cargo bench：性能测试
+- cargo fmt && clippy：检查代码格式和风格
+- cargo build：保证所有平台编译通过
+- cargo test：用户态单元测试，报告测试覆盖率
+- core-test：内核态集成测试，维护通过测例列表
+- （TODO）cargo bench：性能测试
 
 上述测试全部通过才允许合入 master
 
@@ -86,11 +97,11 @@ Rust 语言编写的“混合”操作系统内核
 ## 模块化：rCore OS 生态
 
 拆成小型 no_std crate，每个专注一件事：
-  * `trapframe-rs`：用户-内核态切换
-  * `rcore-console`：在 Framebuffer 上显示终端
-  * `naive-timer`：简单计时器
-  * `executor`：单线程 Future executor
-  * ……
+  - `trapframe-rs`：用户-内核态切换
+  - `rcore-console`：在 Framebuffer 上显示终端
+  - `naive-timer`：简单计时器
+  - `executor`：单线程 Future executor
+  - ……
 
 完成功能后，继续完善文档、测试、examples
 
@@ -106,27 +117,27 @@ Rust 语言编写的“混合”操作系统内核
 
 ## 需求：内核对象单元测试
 
-* 测试对象：线程 `Thread`，内存映射 `VMO`，`VMAR`
+- 测试对象：线程 `Thread`，内存映射 `VMO`，`VMAR`
 
-* 但 `cargo test` 只能在开发环境用户态运行
+- 但 `cargo test` 只能在开发环境用户态运行
 
-* 思考：能否在用户态**模拟**页表和内核线程？
+- 思考：能否在用户态**模拟**页表和内核线程？
 
 ---
 
 ## 方案：用户态模拟内核机制
 
-* 内核线程：等价于用户线程 `std::thread`
+- 内核线程：等价于用户线程 `std::thread`
 
-* 内存映射：Unix `mmap` 系统调用
+- 内存映射：Unix `mmap` 系统调用
 
-    * 用一个文件代表全部物理内存
-    * 用 `mmap` 将文件的不同部分映射到用户地址空间
+    - 用一个文件代表全部物理内存
+    - 用 `mmap` 将文件的不同部分映射到用户地址空间
 
 ### 潜在问题
 
-* 用户线程难以细粒度调度
-* “页表”共享同一个地址空间
+- 用户线程难以细粒度调度
+- “页表”共享同一个地址空间
 
 ---
 
@@ -151,28 +162,28 @@ Library OS，User-mode Linux
 
 用户程序和内核都运行在用户态……
 
-* 控制流转移：系统调用 -> 函数调用
-    * `int 80` / `syscall` -> `call`
-    * `iret` / `sysret` -> `ret`
-    * 需要修改用户程序代码段！
+- 控制流转移：系统调用 -> 函数调用
+    - `int 80` / `syscall` -> `call`
+    - `iret` / `sysret` -> `ret`
+    - 需要修改用户程序代码段！
 
-* 上下文恢复：寻找 "scratch" 寄存器
-    * 用户程序如何找到内核入口点？内核栈？
-    * 利用线程局部存储 TLS，线程指针 fsbase
-    * macOS 无法设置 fsbase 怎么办？
+- 上下文恢复：寻找 "scratch" 寄存器
+    - 用户程序如何找到内核入口点？内核栈？
+    - 利用线程局部存储 TLS，线程指针 fsbase
+    - macOS 无法设置 fsbase 怎么办？
 
 ---
 
 ## HAL API 举例
 
-* 内核线程：`hal_thread_spawn`
+- 内核线程：`hal_thread_spawn`
 
-* 物理内存：`hal_pmem_{read,write}`
-* 虚拟内存：`hal_pt_{map,unmap}`
-* 用户态：`hal_context_run`
-* 定时器：`hal_timer_{set,tick}`
-* 输入输出：`hal_serial_{read,write}`
-* 设备管理：`hal_irq_{enable,handle}`
+- 物理内存：`hal_pmem_{read,write}`
+- 虚拟内存：`hal_pt_{map,unmap}`
+- 用户态：`hal_context_run`
+- 定时器：`hal_timer_{set,tick}`
+- 输入输出：`hal_serial_{read,write}`
+- 设备管理：`hal_irq_{enable,handle}`
 
 ---
 
@@ -186,17 +197,17 @@ Library OS，User-mode Linux
 
 ## `async-await`：用同步风格编写异步代码
 
-* 本质：无栈协程，协作式调度
+- 本质：无栈协程，协作式调度
 
-* 适用于高并发 IO 场景
+- 适用于高并发 IO 场景
 
 应用情况：
 
-* 需要编译器的特殊支持：函数 => 状态机对象
+- 需要编译器的特殊支持：函数 => 状态机对象
 
-* 主流编程语言均已支持：C#，JavaScript，Python，C++
+- 主流编程语言均已支持：C#，JavaScript，Python，C++
 
-* 几乎没有在 bare-metal 中应用
+- 几乎没有在 bare-metal 中应用
 
 ---
 
@@ -286,16 +297,16 @@ async fn sys_object_wait_signal(..., timeout) -> Result {
 
 ## 上层：Executor 运行 Future
 
-* libos：`tokio` / `async-std`，支持多线程，可以模拟多核
-* bare：`rcore-os/executor`，简易单核
-* 未来：期望嵌入式社区的 `async-nostd`？
+- libos：`tokio` / `async-std`，支持多线程，可以模拟多核
+- bare：`rcore-os/executor`，简易单核
+- 未来：期望嵌入式社区的 `async-nostd`？
 
 ### 进出用户态问题
 
 async 要求保持内核上下文（即内核栈）
 
-* 传统 OS：User call Kernel 风格，平时内核栈清空
-* zCore：Kernel call User 风格，保留内核上下文
+- 传统 OS：User call Kernel 风格，平时内核栈清空
+- zCore：Kernel call User 风格，保留内核上下文
 
 ---
 
@@ -309,12 +320,12 @@ async 要求保持内核上下文（即内核栈）
 
 ## Zircon 内核特点
 
-* 实用主义微内核
+- 实用主义微内核
 
-* 使用 C++ 实现，支持 x86_64 和 ARM64
-* 面向对象：将功能划分到内核对象
-* 默认隔离：使用 Capability 进行权限管理
-* 安全考量：强制地址随机化，使用 vDSO 隔离系统调用
+- 使用 C++ 实现，支持 x86_64 和 ARM64
+- 面向对象：将功能划分到内核对象
+- 默认隔离：使用 Capability 进行权限管理
+- 安全考量：强制地址随机化，使用 vDSO 隔离系统调用
 
 ---
 
@@ -325,20 +336,20 @@ async 要求保持内核上下文（即内核栈）
 # Zircon 内核对象
 ## Everything can be KernelObject
 
-* 任务：Job, Process, Thread, Exception
+- 任务：Job, Process, Thread, Exception
 
-* 内存：VMAR, VMO, Pager, Stream
-* IPC：Channel, FIFO, Socket
-* 信号：Event, Timer, Port, Futex
-* 驱动：Resource, Interrupt, PCI ...
+- 内存：VMAR, VMO, Pager, Stream
+- IPC：Channel, FIFO, Socket
+- 信号：Event, Timer, Port, Futex
+- 驱动：Resource, Interrupt, PCI ...
 
 ---
 
 ### Object
 
-* Object：内核对象
-* Rights：对象访问权限
-* Handle = Object + Rights：对象句柄（类似 fd）
+- Object：内核对象
+- Rights：对象访问权限
+- Handle = Object + Rights：对象句柄（类似 fd）
 
 ![h:350](zircon-object.png)
 
@@ -346,9 +357,9 @@ async 要求保持内核上下文（即内核栈）
 
 ## IPC
 
-* Channel：进程间通信基础设施，可以传递数据和 handle
-* FIFO：报文数据传输
-* Socket：流数据传输
+- Channel：进程间通信基础设施，可以传递数据和 handle
+- FIFO：报文数据传输
+- Socket：流数据传输
 
 ![](zircon-channel.png)
 
@@ -356,9 +367,9 @@ async 要求保持内核上下文（即内核栈）
 
 ## Tasks
 
-* Job：作业，负责控制权限（类似容器）
-* Process：进程，负责管理资源
-* Thread：线程，负责调度执行
+- Job：作业，负责控制权限（类似容器）
+- Process：进程，负责管理资源
+- Thread：线程，负责调度执行
 
 ![h:350](zircon-task.png)
 
@@ -366,18 +377,18 @@ async 要求保持内核上下文（即内核栈）
 
 ## Memory and address space
 
-* VMO: Virtual Memory Object
-  * Paged：分页物理内存，支持写时复制
-  * Physical：连续物理内存
-    <!-- * 一段连续的虚拟内存，可以用于在进程之间、内核和用户空间之间共享内存
-    * 在内核中被维护为类似线段树的数据结构，支持从一个VMO中创建新的VMO -->
+- VMO: Virtual Memory Object
+  - Paged：分页物理内存，支持写时复制
+  - Physical：连续物理内存
+    <!-- - 一段连续的虚拟内存，可以用于在进程之间、内核和用户空间之间共享内存
+    - 在内核中被维护为类似线段树的数据结构，支持从一个VMO中创建新的VMO -->
 
-* VMAR: Virtual Memory Address Region
-    * 代表一个进程的虚拟地址空间
-    * 树状结构
-    <!-- * VMO可以被映射到VMAR中，默认为内核进行位置随机，或用户态指定位置但可能失败。 -->
+- VMAR: Virtual Memory Address Region
+    - 代表一个进程的虚拟地址空间
+    - 树状结构
+    <!-- - VMO可以被映射到VMAR中，默认为内核进行位置随机，或用户态指定位置但可能失败。 -->
 
-* Pager：用户态分页机制
+- Pager：用户态分页机制
 
 ---
 
@@ -385,10 +396,10 @@ async 要求保持内核上下文（即内核栈）
 
 每个 Object 有 32 个信号位，用户程序可以阻塞等待。
 
-* Event (Pair)：事件源/对
-* Timer：计时器
-* Futex：用户态同步互斥机制
-* Port：事件分发机制（类似 epoll）
+- Event (Pair)：事件源/对
+- Timer：计时器
+- Futex：用户态同步互斥机制
+- Port：事件分发机制（类似 epoll）
 
 ![h:300](zircon-port.png)
 
@@ -407,7 +418,7 @@ async 要求保持内核上下文（即内核栈）
 
 ## 异步 syscall 的识别
 
-* 如何识别异步 syscall ?
+- 如何识别异步 syscall ?
 
   |              | CPU占用 | Latency | Locality |     备注     |
   | :----------: | :-----: | :-----: | :------: | :----------: |
@@ -422,32 +433,32 @@ async 要求保持内核上下文（即内核栈）
 
 ## 可抢占协程
 
-* 异步执行 latency 的累加
-  * 用户提交 => 内核识别, 内核提交 => 用户识别 ：uintr  or  polling
-  * interrupt => 内核响应：优先级，可抢占协程
-* 协程不可抢占  =>  重新回到线程
-  * 在中断 handler 里新建一个线程 （线程池？）
-  * 协程的线程间迁移
+- 异步执行 latency 的累加
+  - 用户提交 => 内核识别, 内核提交 => 用户识别 ：uintr  or  polling
+  - interrupt => 内核响应：优先级，可抢占协程
+- 协程不可抢占  =>  重新回到线程
+  - 在中断 handler 里新建一个线程 （线程池？）
+  - 协程的线程间迁移
 
 ---
 
 ## 协程的调度
 
-* 协程的类型
-  * 内核协程
-  * 用户协程
-* 核专用化
-  * 内核核：内核协程，切换次数多，切换开销小
-  * 用户核：用户协程，切换考校大，切换次数少
-  * 如果更进一步：磁盘 IO 核，网络核
-* 问题：load balance
+- 协程的类型
+  - 内核协程
+  - 用户协程
+- 核专用化
+  - 内核核：内核协程，切换次数多，切换开销小
+  - 用户核：用户协程，切换考校大，切换次数少
+  - 如果更进一步：磁盘 IO 核，网络核
+- 问题：load balance
 
 
 ---
 ## 协程切换开销
 
-* thread switch  =>  function return and call
-* lmbench lat-ctx
+- thread switch  =>  function return and call
+- lmbench lat-ctx
 
 ```shell
 Context switching - times in microseconds - smaller is better
@@ -458,7 +469,7 @@ proc switch             0.3900 0.8800 0.8900 1.9200 2.2700 2.11000 2.25000
 coroutine switch        0.0330 0.0390 0.0390 0.0600 0.0600 0.06800 0.06800
 ```
 
-* 协程的内存开销 $\approx$ Max{ 同时存活的状态之和 }
+- 协程的内存开销 $\approx$ Max{ 同时存活的状态之和 }
 
 ---
 
