@@ -173,13 +173,13 @@ rCore OS 生态
 
 ###  总体介绍 -  zCore架构设计文档
 zCore 架构设计文档
-![h:450](zcore-arch-design.png)
+![h:450](zcore_arch_design.png)
 
 ---
 
 ###  总体介绍 -  zCore系统调用文档
 zCore 系统调用文档
-![h:450](zcore-api-syscalls.png)
+![h:450](zcore_api_syscalls.png)
 
 ---
 
